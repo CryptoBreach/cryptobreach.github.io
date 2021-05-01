@@ -1,13 +1,17 @@
-## Assignment #1: Bind TCP Shell
+# Assignment #1: Bind TCP Shell
 Create a shell_bind_tcp shellcode that binds to a port and execute a shell on an incoming connection, the port number should be easy to configure.
+
+## Context
 
 Have you ever generated shellcode with tools like Metasploit and MSFvenom? 
 If you have, I'm sure you've wondered what that shellcode actually translates to beyond the generic descriptor "linux/x86/shell_bind_tcp".
 
-I'm going to teach you how to not only read shellcode, but generate your own as well.
+I'm going to teach you how to not only read shellcode, but create your own as well.
 
-There are dozens of approaches you could take to create shellcode, but before we create it, we need to need to understand how it works. 
-To understand shellcode we first need to analyze it.
+## Approach
+
+There are dozens of approaches you could take to create shellcode, but before we create it, we first need to need to understand how it works. 
+To understand better understand what's happening, we're going to reverse enginner and analyze it.
 
 ```markdown
 root@ubuntu:/mnt/hgfs/assembly/exam/1-Assignment/working/4-testShellcode# msfvenom --arch x86 --platform linux --payload linux/x86/shell_bind_tcp R | ndisasm -u -
@@ -61,7 +65,7 @@ Payload size: 78 bytes
 Now if you're not experienced with assembly I'm sure your very confused right now. That's alright though, we're going to learn what all this means.
 Let's start from the top, where the first "int 0x80" instruction is passed. This is known as a syscall instruction, it let's the processor know to interpret the current registers as such.
 
-Moving up 1 position, we see the instruction "mov al,0x66". 0x66 converted to Hex is 102. Every syscall has an integer assigned to it so it can be identified and processed as it's specific function. This syscall (102) points to "socketcall".
+Moving up 1 position, we see the instruction "mov al,0x66". 0x66 converted to Hex is 102. Every syscall has an integer assigned to it so it can be identified and processed as it's specific function. If we inspect "/usr/include/i386-linux-gnu/asm/unistd_32.h" we can see syscall (102) points to "socketcall".
 
 ```
 #define __NR_socketcall         102
