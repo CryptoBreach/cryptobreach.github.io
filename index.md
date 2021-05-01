@@ -8,10 +8,16 @@ If you have, I'm sure you've wondered what that shellcode actually translates to
 
 I'm going to teach you how to not only read shellcode, but create your own as well.
 
+## Prerequisites
+
+- Basic understanding of registers
+- Basic understanding of stack and memory
+- An interest in the subject
+
 ## Approach
 
 There are dozens of approaches you could take to create shellcode, but before we create it, we first need to need to understand how it works. 
-To understand better understand what's happening, we're going to reverse enginner and analyze it.
+To better understand what's happening, we're going to reverse enginner and analyze it.
 
 ```markdown
 root@ubuntu:/mnt/hgfs/assembly/exam/1-Assignment/working/4-testShellcode# msfvenom --arch x86 --platform linux --payload linux/x86/shell_bind_tcp R | ndisasm -u -
@@ -62,8 +68,12 @@ Payload size: 78 bytes
 0000004C  CD80              int 0x80
 ```
 
+## Was that supposed to mean anything?
+
 Now if you're not experienced with assembly I'm sure your very confused right now. That's alright though, we're going to learn what all this means.
 Let's start from the top, where the first "int 0x80" instruction is passed. This is known as a syscall instruction, it let's the processor know to interpret the current registers as such.
+
+## Syscalls
 
 Moving up 1 position, we see the instruction "mov al,0x66". 0x66 converted to Hex is 102. Every syscall has an integer assigned to it so it can be identified and processed as it's specific function. If we inspect "/usr/include/i386-linux-gnu/asm/unistd_32.h" we can see syscall (102) points to "socketcall".
 
@@ -81,6 +91,44 @@ Moving up 1 position, we see the instruction "mov al,0x66". 0x66 converted to He
 #define __NR_idle               112
 #define __NR_vm86old            113
 ```
+
+## What is socketcall? 
+
+Well put simply, it's a common kernel entry point for socket system calls. If we read the documentation [here](https://man7.org/linux/man-pages/man2/socketcall.2.html) we can see it takes 2 parameters: socketcall(int call, unsigned long *args). 
+This is important to know because when we call this syscall we'll need to invoke it correctly. 
+
+If we read the documentation we can see it takes the socket function as the first parameter, this means that it's deciding how to invoke it. The first argument that would be passed
+
+Let's keep a note of everything we now known about this syscall and move on.
+
+## Syscalls in the shellcode
+
+If you go through the shellcode you'll see 6 syscalls happening. If you were to analyze how each function works along with their parameters, well it would take a long time. So I've saved you the trouble and compiled a list of each syscall being invoked in order of when they appear.
+
+1. socketcall(SYS_SOCKET, (AF_INET, SOCK_STREAM, 0))
+2. socketcalll(SYS_BIND,(ADDRESS-SYS_SOCKET-SOCKFD,ADDRESS-SYS_SOCKET-STRUCT,len(16),4444))
+3. socketcall(SYS_LISTEN, sockfd)
+4. socketcall(SYS_ACCEPT, (sockfd)
+5. dup2(acceptFD, (0x2,0x1,0x0))
+6. execve(/bin//sh0x00)
+
+Now I encourage you to actually go through the documentation of each so you have a fundamental understanding of what's actually happening.
+You can find the documentation for each below:
+
+1. https://man7.org/linux/man-pages/man2/socketcall.2.html
+2. https://man7.org/linux/man-pages/man2/bind.2.html
+3. https://man7.org/linux/man-pages/man2/listen.2.html
+4. https://man7.org/linux/man-pages/man2/accept.2.html
+5. https://man7.org/linux/man-pages/man2/execve.2.html
+
+If you're just looking for a quick and dirty explanation I've got you covered too.
+
+1. socketcall(SYS_SOCKET) creates a kernel entry point for socket system calls
+2. socketcall(SYS_BIND) assigns an address to a socket referred to by the sockfd file descriptor
+3. socketcall(SYS_LISTEN) marks the socket as passive, meaning it will be used to accept incoming connection requests using accept().
+4. socketcall(SYS_ACCEPT) extracts the connection request for the listening socket and creates a new connected socket. The newly created socket is not in the listening state.
+5. dup2(acceptFD,*) creates a copy of the file descriptor and uses the new specified file descriptor
+6. execve(/bin//sh0x00) executes the program referred to by pathname. Which in this case is "/bin//sh"
 
 
 
