@@ -141,7 +141,7 @@ If you're just looking for a quick and dirty explanation I've got you covered to
 3. socketcall(SYS_LISTEN) marks the socket as passive, meaning it will be used to accept incoming connection requests using accept().
 4. socketcall(SYS_ACCEPT) extracts the connection request for the listening socket and creates a new connected socket. The newly created socket is not in the listening state.
 5. dup2(acceptFD,*) creates a copy of the file descriptor and uses the new specified file descriptor
-6. execve(/bin//sh0x00) executes the program referred to by pathname. Which in this case is "/bin//sh"
+6. execve(/bin//sh0x00) executes the program referred to by pathname, which in this case is "/bin//sh"
 ```
 
 Now that we know all the syscalls a simple shell-bind-tcp is making, we can replicate it in our own assembly code!
@@ -149,7 +149,7 @@ Now that we know all the syscalls a simple shell-bind-tcp is making, we can repl
 
 ## Creating our own socket()
 
-If we remember the "socketcall(SYS_SOCKET)" is reponsible for the creation of a socket, which is our first step in creating this bind shell.
+If you can remember, "socketcall(SYS_SOCKET)" is reponsible for the creation of a socket, which is our first step in creating this bind shell.
 
 This can be achieved with the syscall "socketcall(SYS_SOCKET, (AF_INET, SOCK_STREAM, 0))".
 
