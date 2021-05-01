@@ -98,7 +98,7 @@ Moving up 1 position, we see the instruction "mov al,0x66". 0x66 converted to He
 ```
 
 
-## What is socketcall? 
+## What is a socketcall? 
 
 Well put simply, it's a common kernel entry point for socket system calls. If we read the documentation [here](https://man7.org/linux/man-pages/man2/socketcall.2.html) we can see it takes 2 parameters: socketcall(int call, unsigned long *args). 
 This is important to know because when we call this syscall we'll need to invoke it correctly. 
@@ -108,7 +108,7 @@ If we read the documentation we can see it takes the socket function as the firs
 Let's keep a note of everything we now known about this syscall and move on.
 
 
-## Syscalls in the shellcode
+## Syscalls in shellcode
 
 If you go through the shellcode you'll see 6 syscalls happening. If you were to analyze how each function works along with their parameters, well it would take a long time. So I've saved you the trouble and compiled a list of each syscall being invoked in order of when they appear.
 
