@@ -1,15 +1,13 @@
 # Assignments
 
 [Assignment 1: Bind TCP Shell](#assignment-1)
-[Assignment 2:](#assignment-2)
+[Assignment 2: Reverse TCP Shell](#assignment-2)
 
 ## Disclaimer
 
-Please be aware I have created each of these as standalone projects where you dont have to read one to understand another.
-
-Do not feel like you have to read it in order, each assignment writeup will contain all the information for the topic.
-
-If you're just looking for the completed shellcode you can access the links above.
+- Be aware I have created each writeup as standalone projects, you dont have to read one to understand another.
+- Don't feel like you have to read it in order, each individula writeup will contain all the information for the topic.
+- If you're just looking for the completed shellcode you can find it on my [github](https://github.com/CryptoBreach) or near the end of each assignment.
 
 
 # Assignment 1: Bind TCP Shell
