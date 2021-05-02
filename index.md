@@ -1,8 +1,8 @@
 # Assignments
 
-[Assignment 1: Bind TCP Shell](#assignment-1)
+[Assignment 1: Bind TCP Shell](#assignment-1:-bind-tcp-shell)
 
-[Assignment 2: Reverse TCP Shell](#assignment-2)
+[Assignment 2: Reverse TCP Shell](#assignment-2:-reverse-tcp-shell)
 
 ## Disclaimer
 
@@ -12,7 +12,7 @@
 
 
 # Assignment 1: Bind TCP Shell
-Create a shell_bind_tcp shellcode that binds to a port and execute a shell on an incoming connection, the port number should be easy to configure.
+Create the shellcode for a Bind TCP Shell payload that binds to a port and execute a shell on an incoming connection, the port number should be easy to configure.
 
 ## Requirements
 - Create Bind Shell TCP shellcode
