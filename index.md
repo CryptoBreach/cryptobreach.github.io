@@ -6,8 +6,8 @@
 
 ## Disclaimer
 
-- Be aware I have created each writeup as standalone projects, you dont have to read one to understand another.
-- Don't feel like you have to read it in order, each individula writeup will contain all the information for the topic.
+- Be aware I have created each writeup as standalone projects, you don't have to read one to understand another.
+- Don't feel like you have to read it in order, each individual writeup will contain all the information for the topic.
 - If you're just looking for the completed shellcode you can find it on my [github](https://github.com/CryptoBreach) or near the end of each assignment.
 
 
