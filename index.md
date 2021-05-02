@@ -2,7 +2,7 @@
 
 [Assignment 1: Bind TCP Shell](#assignment-1)
 
-[Assignment 2: Reverse TCP Shell](#assignment-2:-reverse-tcp-shell)
+[Assignment 2: Reverse TCP Shell](#assignment-2)
 
 ## Disclaimer
 
@@ -588,7 +588,9 @@ root@ubuntu:/mnt/hgfs/assembly/exam/1-Assignment/working/4-testShellcode# cat po
 ```
 
 
-# Assignment 2: Reverse TCP Shell
+# Assignment 2
+# Reverse TCP Shell
+
 Create a shell_reverse_tcp shellcode that connects back to an IP address, on a specific a port and execute a shell. The IP address and port number should be easily configurable.
 
 
