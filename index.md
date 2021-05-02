@@ -1,6 +1,6 @@
 # Assignments
 
-[Assignment 1: Bind TCP Shell](#assignment-1:-bind-tcp-shell)
+[Assignment 1: Bind TCP Shell](#assignment-1)
 
 [Assignment 2: Reverse TCP Shell](#assignment-2:-reverse-tcp-shell)
 
@@ -11,7 +11,9 @@
 - If you're just looking for the completed shellcode you can find it on my [github](https://github.com/CryptoBreach) or near the end of each assignment.
 
 
-# Assignment 1: Bind TCP Shell
+# Assignment 1
+
+# Bind TCP Shell
 Create the shellcode for a Bind TCP Shell payload that binds to a port and execute a shell on an incoming connection, the port number should be easy to configure.
 
 ## Requirements
