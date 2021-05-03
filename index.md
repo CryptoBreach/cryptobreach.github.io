@@ -1,10 +1,10 @@
 # Assignments
 
-[Assignment 1: Bind TCP Shell](#assignment-1)
+[Assignment 1: Bind TCP Shell](#bind-tcp-shell-requirements)
 
 [Assignment 2: Reverse TCP Shell](#assignment-2)
 
-[Assignment 3: Egghunter](#assignment-3:-egghunter)
+[Assignment 3: Egghunter](#assignment-3)
 
 ## Disclaimer
 
@@ -1098,10 +1098,9 @@ Port is:
 
 # Working on it.....
 
-# Assignment 3: Egghunter
+# Assignment 3
 
-
-## Requirements
+# Egghunter Requirements
 - Study about Egg Hunter Shellcode
 - Create a working egghunter demo
 - Make demo configurable for different payloads
