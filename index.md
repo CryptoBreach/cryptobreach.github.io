@@ -1107,6 +1107,36 @@ Port is:
 
 ## Context
 
+What is an egghunter?
+
+Well an egghunter is staged shellcode we use to find larger space in the memory for storing our shellcode. An egghunter must be a very small piece of code and very fast, because searching in a process' Virtual Address Space (VAS) is very CPU consuming. In an egghunter you store a short 4 byte string which must be found in memory twice (avoiding colision with egghunter itself). There are a few ways we can achieve this.
+## The Challenge of Interacting With VAS
+
+If you remember, we're trying to read memory addresses in process-relative VAS. 
+
+The danger of searching a process’ VAS for an egg lies in the fact that there tend to be large regions of unallocated memory that would inevitably be encountered along the path when searching for an egg. 
+
+Dereferencing this unallocated memory could lead to a host of bad things, most probable being the crash of the application.
+
+So how do we work arround this?
+
+## Access(2) Syscall
+
+In this assignment we will use the syscall "access(2)" to achieve this.
+
+Why access(2)?
+
+Well a feature of a Linux syscall is the ability to validate process-relative memory addresses without leading to a segmentation fault or other runtime error in the program itself. 
+When asystem call encounters an invalid memory address, most will return the EFAULT  rror code to indicate that a pointer provided to the system call was not valid.
+```
+root@ubuntu:/home/ubuntu# errno 6
+ENXIO		 6	/* No such device or address */
+```
+
+Fortunately for the egg hunter, this is the exact type of information it needs
+in order to safely traverse the process’ VAS without dereferencing the invalid
+memory regions that are strewn about the process
+
 ## Prerequisites
 
 - Basic understanding of registers
