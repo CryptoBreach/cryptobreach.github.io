@@ -4,6 +4,8 @@
 
 [Assignment 2: Reverse TCP Shell](#assignment-2)
 
+[Assignment 3: Egghunter](#assignment-3:-egghunter)
+
 ## Disclaimer
 
 - Be aware I have created each writeup as standalone projects, you don't have to read one to understand another.
@@ -13,10 +15,8 @@
 
 # Assignment 1
 
-# Bind TCP Shell
-Create the shellcode for a Bind TCP Shell payload that binds to a port and execute a shell on an incoming connection, the port number should be easy to configure.
+# Bind TCP Shell Requirements
 
-## Requirements
 - Create Bind Shell TCP shellcode
 - Reverse connects to configured PORT
 - Execs Shell on successful connection
@@ -33,7 +33,7 @@ I'm going to teach you how to not only read shellcode, but create your own as we
 
 - Basic understanding of registers
 - Basic understanding of stack and memory
-- An interest in the subject
+- Basic understanding of assembly
 
 
 ## Approach
@@ -99,7 +99,7 @@ Let's start from the top, where the first "int 0x80" instruction is passed.
 int 0x80 is the assembly language instruction that is used to invoke system calls in Linux on x86 (i.e., Intel-compatible) processors.
 So now we understand the shellcode is making multiple syscalls!
 
-You can read more about interrupts here [here](http://www.linfo.org/int_0x80.html)
+You can read more about interrupts [here](http://www.linfo.org/int_0x80.html)
 
 ## Syscalls
 
@@ -589,16 +589,17 @@ root@ubuntu:/mnt/hgfs/assembly/exam/1-Assignment/working/4-testShellcode# cat po
 
 
 # Assignment 2
-# Reverse TCP Shell
-
-Create a shell_reverse_tcp shellcode that connects back to an IP address, on a specific a port and execute a shell. The IP address and port number should be easily configurable.
-
-
-## Requirements
+# Reverse TCP Shell Requirements
 - Create Reverse Shell TCP shellcode
 - Reverse connects to configured IP and PORT
 - Execs Shell on successful connection
 - IP and Port should be easily configurable
+
+## Context
+Have you ever generated shellcode with tools like Metasploit and MSFvenom? 
+If you have, I'm sure you've wondered what that shellcode actually translates to beyond the generic descriptor "linux/x86/shell_bind_tcp".
+
+I'm going to teach you how to not only read shellcode, but create your own as well.
 
 ## Approach
 There are dozens of approaches you could take to create shellcode, but before we create it, we first need to need to understand how it works. 
@@ -654,7 +655,7 @@ Let's start from the top, where the first "int 0x80" instruction is passed.
 int 0x80 is the assembly language instruction that is used to invoke system calls in Linux on x86 (i.e., Intel-compatible) processors.
 So now we understand the shellcode is making multiple syscalls!
 
-You can read more about interrupts here [here](http://www.linfo.org/int_0x80.html)
+You can read more about interrupts [here](http://www.linfo.org/int_0x80.html)
 
 ## Syscalls
 
@@ -761,7 +762,7 @@ Now that we have our socket, let's go ahead and give it the property to connect 
 In my case I wanted to set the inet_addr (IP) to 127.0.0.1, and sin_port (port) to 4444.
 
 In C language that would look like this:
-- ('127.0.0.1')
+- inet_addr('127.0.0.1')
 - sin_port(4444)
 
 
@@ -1097,3 +1098,23 @@ Port is:
 
 # Working on it.....
 
+# Assignment 3: Egghunter
+
+
+## Requirements
+- Study about Egg Hunter Shellcode
+- Create a working egghunter demo
+- Make demo configurable for different payloads
+
+## Context
+
+## Prerequisites
+
+- Basic understanding of registers
+- Basic understanding of stack and memory
+- Basic understanding of assembly
+
+
+## Approach
+
+There are dozens of approaches you
