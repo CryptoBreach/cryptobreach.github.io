@@ -6,6 +6,8 @@
 
 [Assignment 3: Egghunter](#assignment-3)
 
+[Assignment 4: Custom Encoder/Decoder](#assignment-4)
+
 ## Disclaimer
 
 - Be aware I have created each writeup as standalone projects, you don't have to read one to understand another.
