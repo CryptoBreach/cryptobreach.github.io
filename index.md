@@ -1135,7 +1135,7 @@ There are dozens are a few ways we could implement this.
 
 For my egg hunter, I decided to make something simple and easy to create. The egg hunter will iterate through memory addresses, and compare the value at that memory address to the provided egg. If the value matches the egg, the egg hunter will jump to that memory space and execute the second stage of the shellcode payload.
 
-The memory of the application would look something like <egg hunter><random memory><egg><second stage shellcode><random memory>. The egg hunter will keep searching through memory until the egg is found, and then jump to the second stage and execute.
+The memory of the application would look something like |[egg hunter]|[random memory]|[egg]|[second stage shellcode]|[random memory]|. The egg hunter will keep searching through memory until the egg is found, and then jump to the second stage and execute.
 	
 ## Syscalls
 
@@ -1246,10 +1246,10 @@ Shellcode size: 35 bytes
 If you remember, our egghunter will locate the egg in memory and execute the shellcode after it.
 
 The structure for that was: 
-- <egg hunter><random memory><egg><second stage shellcode><random memory.
+-  |[egg hunter]|[random memory]|[egg]|[second stage shellcode]|[random memory]|.
 
 To test this, we'll be using a reverse shell in this demonstartion. The structe should look like this:
-- <egg hunter><random memory><egg><reverse shell><random memory
+-  |[egg hunter]|[random memory]|[egg]|[second stage shellcode]|[random memory]|
 
 Knowing this we'll take the dumped shellcode and place it in the following C file that holds our reverse shell, we do this to confirm it works in a C program.
 
@@ -1436,7 +1436,7 @@ max_reached:
 	mov bl, 0xff ; 0xff = 255 
 	inc ebx ; = 256
 	sub bx, dx ; 256 - (13 - byte value of the shellcode)
-	mov byte [esi], bl ; move bl into RSI
+	mov byte [esi], bl ; move bl into ESI
  
 LoopOrExecute:
 	inc esi ; move to next byte
