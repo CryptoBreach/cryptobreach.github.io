@@ -1,12 +1,14 @@
 # Assignments
 
-[Assignment 1: Bind TCP Shell](#bind-tcp-shell-requirements)
+[Assignment 1: Bind TCP Shell](#assignment-1)
 
 [Assignment 2: Reverse TCP Shell](#assignment-2)
 
 [Assignment 3: Egghunter](#assignment-3)
 
 [Assignment 4: Custom Encoder/Decoder](#assignment-4)
+
+[Assignment 5: Malware Analysis](#assignment-5)
 
 ## Disclaimer
 
