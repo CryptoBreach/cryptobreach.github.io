@@ -1558,6 +1558,12 @@ I hope you've enjoyed learning about custom encoders/decoders and implementing t
 - Use GDB/Ndisasm/Libemu to dissect the functionality of the shellcode
 - Present your analysis
 
+## Prerequisites
+
+- Basic understanding of registers
+- Basic understanding of stack and memory
+- Basic understanding of assembly
+
 ## Context
 
 For this assignment we are going to dissect three different shellcodes generated with metasploit. Cool right ? It might allow us to diversify our opcodes knowledge and find new pattern and tricks in assembly!
@@ -1778,6 +1784,12 @@ I hope you've enjoyed learning about malware analysis!
 - Take 3 shellcodes from Shell-Storm and create polymorphic versions of them to beat pattern matching
 - The polymorphic versions cannot be larger than 150% of the existing shellcode
 - Bonus points for making it shorter in length than original
+
+## Prerequisites
+
+- Basic understanding of registers
+- Basic understanding of stack and memory
+- Basic understanding of assembly
 
 ## Context
 Have you ever generated shellcode with tools like Metasploit and MSFvenom? 
@@ -2330,6 +2342,12 @@ I hope you've enjoyed learning about polymorphic shellcode!
 - Create a custom crypter like the one shown in the “crypters” video
 - Free to use any encryption schema
 - Use any programming language
+
+## Prerequisites
+
+- Basic understanding of registers
+- Basic understanding of stack and memory
+- Basic understanding of assembly
 
 ## Context
 So what is a Crypter or a Packer? From what I have read crypters and packers are quite similar. While the lines between them can blur a packer generally deals with compression and obfuscation and is often used by software companies to prevent revers-engineering their software. A crypter is focused on encryption and is a program that has grown out of the underground community. Both crypters and packers obfuscate code to deter reverse-engineering. By utilizing a crypter or packer on malicious code an attacker can increase their chances of bypassing anti-virus fingerprint/signature based detection.
