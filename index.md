@@ -1,6 +1,6 @@
 # Student ID: PA-26791
+### [Source code for assignments can be found here](https://github.com/CryptoBreach/SLAEx86)
 # Assignments
-# [Github](https://github.com/CryptoBreach/SLAEx86)
 
 [Assignment 1: Bind TCP Shell](#assignment-1)
 
