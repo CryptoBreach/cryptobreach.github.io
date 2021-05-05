@@ -14,7 +14,7 @@
 
 [Assignment 6: Shellstorm Polymorphism](#assignment-6)
 
-[Assignment 7: Shellstorm Polymorphism](#assignment-7)
+[Assignment 7: Custom Crypter](#assignment-7)
 
 
 ## Disclaimer
