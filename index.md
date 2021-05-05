@@ -1773,7 +1773,7 @@ I hope you've enjoyed learning about malware analysis!
 
 
 # Assignment 6
-# Polymorphic Shellcode Requirements
+# Shellstorm Polymorphism Requirements
 
 - Take 3 shellcodes from Shell-Storm and create polymorphic versions of them to beat pattern matching
 - The polymorphic versions cannot be larger than 150% of the existing shellcode
