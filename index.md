@@ -1768,20 +1768,22 @@ I hope you've enjoyed learning about malware analysis!
 
 
 
-## Context
-Have you ever generated shellcode with tools like Metasploit and MSFvenom? 
-If you have, I'm sure you've wondered what that shellcode actually translates to beyond the generic descriptor "linux/x86/shell_bind_tcp".
-
-I'm going to teach you how to not only read shellcode, but create your own as well.
 
 
-## Prerequisites
+
+
+# Assignment 6
+# Polymorphic Shellcode Requirements
 
 - Take 3 shellcodes from Shell-Storm and create polymorphic versions of them to beat pattern matching
 - The polymorphic versions cannot be larger than 150% of the existing shellcode
 - Bonus points for making it shorter in length than original
 
+## Context
+Have you ever generated shellcode with tools like Metasploit and MSFvenom? 
+If you have, I'm sure you've wondered what that shellcode actually translates to beyond the generic descriptor "linux/x86/shell_bind_tcp".
 
+I'm going to teach you how to not only read shellcode, but create your own as well.
 
 ## Approach
 
